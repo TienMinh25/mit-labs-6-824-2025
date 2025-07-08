@@ -7,12 +7,15 @@ package main
 // go build -buildmode=plugin rtiming.go
 //
 
-import "6.5840/mr"
-import "fmt"
-import "os"
-import "syscall"
-import "time"
-import "io/ioutil"
+import (
+	"fmt"
+	"io/ioutil"
+	"os"
+	"syscall"
+	"time"
+
+	"github.com/TienMinh25/mit-labs-6-824-2025/mapreduce/types"
+)
 
 func nparallel(phase string) int {
 	// create a file so that other workers will see that
@@ -59,19 +62,19 @@ func nparallel(phase string) int {
 	return ret
 }
 
-func Map(filename string, contents string) []mr.KeyValue {
+func Map(filename string, contents string) []types.KeyValue {
 
-	kva := []mr.KeyValue{}
-	kva = append(kva, mr.KeyValue{"a", "1"})
-	kva = append(kva, mr.KeyValue{"b", "1"})
-	kva = append(kva, mr.KeyValue{"c", "1"})
-	kva = append(kva, mr.KeyValue{"d", "1"})
-	kva = append(kva, mr.KeyValue{"e", "1"})
-	kva = append(kva, mr.KeyValue{"f", "1"})
-	kva = append(kva, mr.KeyValue{"g", "1"})
-	kva = append(kva, mr.KeyValue{"h", "1"})
-	kva = append(kva, mr.KeyValue{"i", "1"})
-	kva = append(kva, mr.KeyValue{"j", "1"})
+	kva := []types.KeyValue{}
+	kva = append(kva, types.KeyValue{Key: "a", Value: "1"})
+	kva = append(kva, types.KeyValue{Key: "b", Value: "1"})
+	kva = append(kva, types.KeyValue{Key: "c", Value: "1"})
+	kva = append(kva, types.KeyValue{Key: "d", Value: "1"})
+	kva = append(kva, types.KeyValue{Key: "e", Value: "1"})
+	kva = append(kva, types.KeyValue{Key: "f", Value: "1"})
+	kva = append(kva, types.KeyValue{Key: "g", Value: "1"})
+	kva = append(kva, types.KeyValue{Key: "h", Value: "1"})
+	kva = append(kva, types.KeyValue{Key: "i", Value: "1"})
+	kva = append(kva, types.KeyValue{Key: "j", Value: "1"})
 	return kva
 }
 

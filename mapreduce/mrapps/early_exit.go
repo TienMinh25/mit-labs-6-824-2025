@@ -11,14 +11,14 @@ import (
 	"strings"
 	"time"
 
-	"6.5840/mr"
+	"github.com/TienMinh25/mit-labs-6-824-2025/mapreduce/types"
 )
 
 // The map function is called once for each file of input.
 // This map function just returns 1 for each file
-func Map(filename string, contents string) []mr.KeyValue {
-	kva := []mr.KeyValue{}
-	kva = append(kva, mr.KeyValue{filename, "1"})
+func Map(filename string, contents string) []types.KeyValue {
+	kva := []types.KeyValue{}
+	kva = append(kva, types.KeyValue{filename, "1"})
 	return kva
 }
 

@@ -8,18 +8,21 @@ package main
 // go build -buildmode=plugin crash.go
 //
 
-import "6.5840/mr"
-import "math/rand"
-import "strings"
-import "strconv"
-import "time"
-import "fmt"
-import "os"
-import "io/ioutil"
+import (
+	"fmt"
+	"io/ioutil"
+	"math/rand"
+	"os"
+	"strconv"
+	"strings"
+	"time"
+
+	"github.com/TienMinh25/mit-labs-6-824-2025/mapreduce/types"
+)
 
 var count int
 
-func Map(filename string, contents string) []mr.KeyValue {
+func Map(filename string, contents string) []types.KeyValue {
 	me := os.Getpid()
 	f := fmt.Sprintf("mr-worker-jobcount-%d-%d", me, count)
 	count++
@@ -28,7 +31,7 @@ func Map(filename string, contents string) []mr.KeyValue {
 		panic(err)
 	}
 	time.Sleep(time.Duration(2000+rand.Intn(3000)) * time.Millisecond)
-	return []mr.KeyValue{mr.KeyValue{"a", "x"}}
+	return []types.KeyValue{types.KeyValue{"a", "x"}}
 }
 
 func Reduce(key string, values []string) string {

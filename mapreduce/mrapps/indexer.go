@@ -6,25 +6,27 @@ package main
 // go build -buildmode=plugin indexer.go
 //
 
-import "fmt"
-import "6.5840/mr"
+import (
+	"fmt"
+	"sort"
+	"strings"
+	"unicode"
 
-import "strings"
-import "unicode"
-import "sort"
+	"github.com/TienMinh25/mit-labs-6-824-2025/mapreduce/types"
+)
 
 // The mapping function is called once for each piece of the input.
 // In this framework, the key is the name of the file that is being processed,
 // and the value is the file's contents. The return value should be a slice of
 // key/value pairs, each represented by a mr.KeyValue.
-func Map(document string, value string) (res []mr.KeyValue) {
+func Map(document string, value string) (res []types.KeyValue) {
 	m := make(map[string]bool)
 	words := strings.FieldsFunc(value, func(x rune) bool { return !unicode.IsLetter(x) })
 	for _, w := range words {
 		m[w] = true
 	}
 	for w := range m {
-		kv := mr.KeyValue{w, document}
+		kv := types.KeyValue{w, document}
 		res = append(res, kv)
 	}
 	return

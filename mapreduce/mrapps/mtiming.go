@@ -7,14 +7,17 @@ package main
 // go build -buildmode=plugin mtiming.go
 //
 
-import "6.5840/mr"
-import "strings"
-import "fmt"
-import "os"
-import "syscall"
-import "time"
-import "sort"
-import "io/ioutil"
+import (
+	"fmt"
+	"io/ioutil"
+	"os"
+	"sort"
+	"strings"
+	"syscall"
+	"time"
+
+	"github.com/TienMinh25/mit-labs-6-824-2025/mapreduce/types"
+)
 
 func nparallel(phase string) int {
 	// create a file so that other workers will see that
@@ -61,18 +64,18 @@ func nparallel(phase string) int {
 	return ret
 }
 
-func Map(filename string, contents string) []mr.KeyValue {
+func Map(filename string, contents string) []types.KeyValue {
 	t0 := time.Now()
 	ts := float64(t0.Unix()) + (float64(t0.Nanosecond()) / 1000000000.0)
 	pid := os.Getpid()
 
 	n := nparallel("map")
 
-	kva := []mr.KeyValue{}
-	kva = append(kva, mr.KeyValue{
+	kva := []types.KeyValue{}
+	kva = append(kva, types.KeyValue{
 		fmt.Sprintf("times-%v", pid),
 		fmt.Sprintf("%.1f", ts)})
-	kva = append(kva, mr.KeyValue{
+	kva = append(kva, types.KeyValue{
 		fmt.Sprintf("parallel-%v", pid),
 		fmt.Sprintf("%d", n)})
 	return kva
