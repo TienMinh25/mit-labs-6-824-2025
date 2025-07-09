@@ -9,17 +9,19 @@ import (
 )
 
 // ParseArgs return
-// - files				([]string) 	(required)
-// - plugin file		(string) 	(required)
-// - master ip  		(string)	(required)
-// - nReduce			(int)		(optional)
-// - totalWorker		(int) 		(optional)
-func ParseArgs() ([]string, string, string, int, int){
+// - files					([]string) 	(required)
+// - plugin file		(string) 		(required)
+// - master ip  		(string)		(required)
+// - worker ip 			(string)		(required for worker, optional for master)
+// - nReduce				(int)				(optional)
+// - totalWorker		(int) 			(optional)
+func ParseArgs() ([]string, string, string, string, int, int) {
 	var files []string
 	var nReducer int
 	var totalWorker int
 	var plugin string
-	var port int64
+	var port int
+	var portWorker int
 
 	rootCmd := &cobra.Command{
 		Use:   "mr",
@@ -27,7 +29,6 @@ func ParseArgs() ([]string, string, string, int, int){
 		Long:  "MapReudce is an easy-to-use Map Reduce Go parallel-computing framework inspired by 2025 6.824 lab1.",
 		Run: func(cmd *cobra.Command, args []string) {
 			tempFiles := []string{}
-			fmt.Println(files)
 
 			for _, f := range files {
 				expandFiles, err := filepath.Glob(f)
@@ -35,7 +36,7 @@ func ParseArgs() ([]string, string, string, int, int){
 				if err != nil {
 					panic(err)
 				}
-				fmt.Println(expandFiles)
+
 				tempFiles = append(tempFiles, expandFiles...)
 			}
 
@@ -58,12 +59,13 @@ func ParseArgs() ([]string, string, string, int, int){
 	rootCmd.MarkPersistentFlagRequired("plugin")
 	rootCmd.PersistentFlags().IntVarP(&nReducer, "reduce", "r", 1, "Number of Reducers")
 	rootCmd.PersistentFlags().IntVarP(&totalWorker, "worker", "w", 4, "Number of Workers(for master node)\nID of worker(for worker node)")
-	rootCmd.PersistentFlags().Int64Var(&port, "port", 10000, "Port number")
+	rootCmd.PersistentFlags().IntVarP(&port, "port", "m", 40000, "Master port number")
+	rootCmd.PersistentFlags().IntVarP(&portWorker, "port worker", "P", 40001, "Worker port number")
 
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
 
-	return files, plugin, fmt.Sprintf("127.0.0.1:%v", port), nReducer, totalWorker 
+	return files, plugin, fmt.Sprintf("127.0.0.1:%v", port), fmt.Sprintf("127.0.0.1:%v", portWorker), nReducer, totalWorker
 }

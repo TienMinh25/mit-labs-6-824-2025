@@ -12,8 +12,12 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+func init() {
+	log.SetLevel(log.TraceLevel)
+}
+
 func main() {
-	_, _, masterIP, nReduce, totalWorker := mapreduce.ParseArgs()
+	_, _, masterIP, _, nReduce, totalWorker := mapreduce.ParseArgs()
 
 	baseServer := grpc.NewServer()
 	ms := master.NewMaster(totalWorker, nReduce)
@@ -25,6 +29,7 @@ func main() {
 		log.Fatalf("Cannnot listen on ip: %v", masterIP)
 	}
 
+	// will be change later, just used for testing purpose
 	var wg sync.WaitGroup
 
 	wg.Add(1)
@@ -34,7 +39,15 @@ func main() {
 		baseServer.Serve(lis)
 	}()
 
-	log.Info("[Master] Master gRPC server start")
+	log.Infof("[Master] Master gRPC server start on %v", masterIP)
 
 	wg.Wait()
+
+	// TODO: distributed work -> chia cac file thanh cac phan file nho de chia ra lam map task
+
+	// TODO: distributed map task for worker (handle fault tolerance)
+
+	// TODO: distributed reduce task for worker (handle fault tolerance)
+
+	// TODO: after done, send signal worker to terminal (graceful shutdown)
 }

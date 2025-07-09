@@ -9,10 +9,6 @@ import (
 	"github.com/TienMinh25/mit-labs-6-824-2025/mapreduce/proto/proto_gen"
 )
 
-func init() {
-	log.SetLevel(log.TraceLevel)
-}
-
 // The master needs to manage:
 // - Worker info 			(worker's health, worker's status, IP of worker)
 // - Map task 				(file execute, which worker is doing task, status of task)

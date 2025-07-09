@@ -6,6 +6,7 @@ option go_package = "./proto_gen";
 service Worker {
     rpc AssignMapTask(AssignMapTaskReq) returns (AssignMapTaskRes);
     rpc AssignReduceTask(AssignReduceTaskReq) returns (AssignReduceTaskRes);
+    rpc End(Empty) returns (Empty);
 }
 
 message AssignMapTaskReq {
@@ -23,3 +24,5 @@ message AssignReduceTaskReq {
 message AssignReduceTaskRes {
 
 }
+
+message Empty {}
