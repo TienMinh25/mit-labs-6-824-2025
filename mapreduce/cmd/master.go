@@ -2,6 +2,7 @@ package main
 
 import (
 	"net"
+	"sync"
 
 	"github.com/TienMinh25/mit-labs-6-824-2025/mapreduce"
 	"github.com/TienMinh25/mit-labs-6-824-2025/mapreduce/master"
@@ -12,7 +13,7 @@ import (
 )
 
 func main() {
-	inputFiles, pluginFile, masterIP, nReduce, totalWorker := mapreduce.ParseArgs()
+	_, _, masterIP, nReduce, totalWorker := mapreduce.ParseArgs()
 
 	baseServer := grpc.NewServer()
 	ms := master.NewMaster(totalWorker, nReduce)
@@ -24,7 +25,16 @@ func main() {
 		log.Fatalf("Cannnot listen on ip: %v", masterIP)
 	}
 
-	go baseServer.Serve(lis)
+	var wg sync.WaitGroup
+
+	wg.Add(1)
+
+	go func() {
+		defer wg.Done()
+		baseServer.Serve(lis)
+	}()
 
 	log.Info("[Master] Master gRPC server start")
+
+	wg.Wait()
 }

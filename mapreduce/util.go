@@ -22,11 +22,12 @@ func ParseArgs() ([]string, string, string, int, int){
 	var port int64
 
 	rootCmd := &cobra.Command{
-		Use:   "mapreduce",
+		Use:   "mr",
 		Short: "MapReduce is an easy-to-use parallel framework by Tien Minh",
 		Long:  "MapReudce is an easy-to-use Map Reduce Go parallel-computing framework inspired by 2025 6.824 lab1.",
 		Run: func(cmd *cobra.Command, args []string) {
 			tempFiles := []string{}
+			fmt.Println(files)
 
 			for _, f := range files {
 				expandFiles, err := filepath.Glob(f)
@@ -34,7 +35,7 @@ func ParseArgs() ([]string, string, string, int, int){
 				if err != nil {
 					panic(err)
 				}
-
+				fmt.Println(expandFiles)
 				tempFiles = append(tempFiles, expandFiles...)
 			}
 
