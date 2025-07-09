@@ -1,4 +1,4 @@
-package mr
+package main
 
 //
 // simple sequential MapReduce.

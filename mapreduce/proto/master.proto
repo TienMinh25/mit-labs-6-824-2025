@@ -1,0 +1,19 @@
+syntax = "proto3";
+
+option go_package = "./proto_gen";
+
+// service for master server
+service Master {
+    rpc RegisterWorker(RegisterWorkerReq) returns (RegisterWorkerRes);
+}
+
+message RegisterWorkerReq {
+    string worker_ip = 1;
+    string uuid = 2;
+}
+
+message RegisterWorkerRes {
+    bool is_success = 1;
+    int64 id = 2;
+}
+

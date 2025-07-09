@@ -1,0 +1,25 @@
+syntax = "proto3";
+
+option go_package = "./proto_gen";
+
+// service server for worker server
+service Worker {
+    rpc AssignMapTask(AssignMapTaskReq) returns (AssignMapTaskRes);
+    rpc AssignReduceTask(AssignReduceTaskReq) returns (AssignReduceTaskRes);
+}
+
+message AssignMapTaskReq {
+
+}
+
+message AssignMapTaskRes {
+
+}
+
+message AssignReduceTaskReq {
+
+}
+
+message AssignReduceTaskRes {
+
+}
