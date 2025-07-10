@@ -2,6 +2,7 @@ package worker
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/TienMinh25/mit-labs-6-824-2025/mapreduce/proto/proto_gen"
@@ -10,7 +11,7 @@ import (
 )
 
 type IRpcClient interface {
-	RegisterWorker(data *proto_gen.RegisterWorkerReq) int
+	RegisterWorker(data *proto_gen.RegisterWorkerReq) (int, error)
 }
 
 type masterClient struct {
@@ -32,28 +33,37 @@ func NewRPCMasterClient(masterIP, UUID, workerIP string) IRpcClient {
 }
 
 // RegisterWorker implements IRpcClient.
-func (m *masterClient) RegisterWorker(data *proto_gen.RegisterWorkerReq) int {
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
-	defer cancel()
-
+func (m *masterClient) RegisterWorker(data *proto_gen.RegisterWorkerReq) (int, error) {
 	log.Tracef("Worker ip: %v is starting to register master", data.WorkerIp)
 
-	res, err := m.client.RegisterWorker(ctx, data)
+	var res *proto_gen.RegisterWorkerRes
+	var err error
 
-	log.Tracef("Worker ip: %v register end", data.WorkerIp)
-	if err != nil {
-		for retry := 1; retry <= 3; retry++ {
-			res, err = m.client.RegisterWorker(ctx, data)
+	for retry := 1; retry <= 3; retry++ {
+		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		res, err = m.client.RegisterWorker(ctx, data)
+		cancel()
 
-			if retry == 3 && err != nil {
-				log.Fatalf("[Worker] Cannot register worker with master")
-			}
+		// if retry success, stop retry
+		if err == nil && res.IsSuccess {
+			log.Tracef("Worker ip: %v register successful", data.WorkerIp)
+			return int(res.Id), nil
+		}
+
+		log.Warnf("Worker ip: %v register attempt %d failed: %v", data.WorkerIp, retry, err)
+
+		// delay before retry
+		if retry <= 2 {
+			time.Sleep(time.Millisecond * 500)
 		}
 	}
 
-	if !res.IsSuccess {
-		panic("Register Error")
+	log.Errorf("Worker ip: %v failed to register after 3 attempts", data.WorkerIp)
+	log.Tracef("Worker ip: %v register end", data.WorkerIp)
+
+	if err != nil {
+		return 0, fmt.Errorf("register worker failed: %w", err)
 	}
 
-	return int(res.Id)
+	return 0, err
 }

@@ -22,6 +22,7 @@ const (
 	Worker_AssignMapTask_FullMethodName    = "/Worker/AssignMapTask"
 	Worker_AssignReduceTask_FullMethodName = "/Worker/AssignReduceTask"
 	Worker_End_FullMethodName              = "/Worker/End"
+	Worker_Health_FullMethodName           = "/Worker/Health"
 )
 
 // WorkerClient is the client API for Worker service.
@@ -30,9 +31,10 @@ const (
 //
 // service server for worker server
 type WorkerClient interface {
-	AssignMapTask(ctx context.Context, in *AssignMapTaskReq, opts ...grpc.CallOption) (*AssignMapTaskRes, error)
-	AssignReduceTask(ctx context.Context, in *AssignReduceTaskReq, opts ...grpc.CallOption) (*AssignReduceTaskRes, error)
+	AssignMapTask(ctx context.Context, in *AssignMapTaskReq, opts ...grpc.CallOption) (*Result, error)
+	AssignReduceTask(ctx context.Context, in *AssignReduceTaskReq, opts ...grpc.CallOption) (*Result, error)
 	End(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*Empty, error)
+	Health(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*HealthRes, error)
 }
 
 type workerClient struct {
@@ -43,9 +45,9 @@ func NewWorkerClient(cc grpc.ClientConnInterface) WorkerClient {
 	return &workerClient{cc}
 }
 
-func (c *workerClient) AssignMapTask(ctx context.Context, in *AssignMapTaskReq, opts ...grpc.CallOption) (*AssignMapTaskRes, error) {
+func (c *workerClient) AssignMapTask(ctx context.Context, in *AssignMapTaskReq, opts ...grpc.CallOption) (*Result, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(AssignMapTaskRes)
+	out := new(Result)
 	err := c.cc.Invoke(ctx, Worker_AssignMapTask_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -53,9 +55,9 @@ func (c *workerClient) AssignMapTask(ctx context.Context, in *AssignMapTaskReq, 
 	return out, nil
 }
 
-func (c *workerClient) AssignReduceTask(ctx context.Context, in *AssignReduceTaskReq, opts ...grpc.CallOption) (*AssignReduceTaskRes, error) {
+func (c *workerClient) AssignReduceTask(ctx context.Context, in *AssignReduceTaskReq, opts ...grpc.CallOption) (*Result, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(AssignReduceTaskRes)
+	out := new(Result)
 	err := c.cc.Invoke(ctx, Worker_AssignReduceTask_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -73,15 +75,26 @@ func (c *workerClient) End(ctx context.Context, in *Empty, opts ...grpc.CallOpti
 	return out, nil
 }
 
+func (c *workerClient) Health(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*HealthRes, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(HealthRes)
+	err := c.cc.Invoke(ctx, Worker_Health_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // WorkerServer is the server API for Worker service.
 // All implementations must embed UnimplementedWorkerServer
 // for forward compatibility.
 //
 // service server for worker server
 type WorkerServer interface {
-	AssignMapTask(context.Context, *AssignMapTaskReq) (*AssignMapTaskRes, error)
-	AssignReduceTask(context.Context, *AssignReduceTaskReq) (*AssignReduceTaskRes, error)
+	AssignMapTask(context.Context, *AssignMapTaskReq) (*Result, error)
+	AssignReduceTask(context.Context, *AssignReduceTaskReq) (*Result, error)
 	End(context.Context, *Empty) (*Empty, error)
+	Health(context.Context, *Empty) (*HealthRes, error)
 	mustEmbedUnimplementedWorkerServer()
 }
 
@@ -92,14 +105,17 @@ type WorkerServer interface {
 // pointer dereference when methods are called.
 type UnimplementedWorkerServer struct{}
 
-func (UnimplementedWorkerServer) AssignMapTask(context.Context, *AssignMapTaskReq) (*AssignMapTaskRes, error) {
+func (UnimplementedWorkerServer) AssignMapTask(context.Context, *AssignMapTaskReq) (*Result, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method AssignMapTask not implemented")
 }
-func (UnimplementedWorkerServer) AssignReduceTask(context.Context, *AssignReduceTaskReq) (*AssignReduceTaskRes, error) {
+func (UnimplementedWorkerServer) AssignReduceTask(context.Context, *AssignReduceTaskReq) (*Result, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method AssignReduceTask not implemented")
 }
 func (UnimplementedWorkerServer) End(context.Context, *Empty) (*Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method End not implemented")
+}
+func (UnimplementedWorkerServer) Health(context.Context, *Empty) (*HealthRes, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Health not implemented")
 }
 func (UnimplementedWorkerServer) mustEmbedUnimplementedWorkerServer() {}
 func (UnimplementedWorkerServer) testEmbeddedByValue()                {}
@@ -176,6 +192,24 @@ func _Worker_End_Handler(srv interface{}, ctx context.Context, dec func(interfac
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Worker_Health_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(WorkerServer).Health(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Worker_Health_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(WorkerServer).Health(ctx, req.(*Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Worker_ServiceDesc is the grpc.ServiceDesc for Worker service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -194,6 +228,10 @@ var Worker_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "End",
 			Handler:    _Worker_End_Handler,
+		},
+		{
+			MethodName: "Health",
+			Handler:    _Worker_Health_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

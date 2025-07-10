@@ -2,6 +2,7 @@ package worker
 
 import (
 	"context"
+	"sync"
 
 	"github.com/TienMinh25/mit-labs-6-824-2025/mapreduce/master"
 	"github.com/TienMinh25/mit-labs-6-824-2025/mapreduce/proto/proto_gen"
@@ -23,6 +24,7 @@ type Worker struct {
 	ChanEnd      chan bool
 	nReduce      int
 	MasterClient IRpcClient
+	mux          sync.Mutex
 	proto_gen.UnimplementedWorkerServer
 }
 
@@ -36,6 +38,16 @@ func NewWorker(nReduce int, masterIP string) proto_gen.WorkerServer {
 	}
 }
 
+// Health implements proto_gen.WorkerServer.
+func (w *Worker) Health(_ context.Context, _ *proto_gen.Empty) (*proto_gen.HealthRes, error) {
+	w.mux.Lock()
+	defer w.mux.Unlock()
+	return &proto_gen.HealthRes{
+		Status: int64(w.WorkerStatus),
+	}, nil
+}
+
+// End implements proto_gen.WorkerServer.
 func (w *Worker) End(_ context.Context, _ *proto_gen.Empty) (*proto_gen.Empty, error) {
 	log.Tracef("[Worker] Worker [UUID: %v, ID: %v] is terminating", w.UUID, w.ID)
 	w.ChanEnd <- true

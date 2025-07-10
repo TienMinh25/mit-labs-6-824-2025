@@ -4,25 +4,32 @@ option go_package = "./proto_gen";
 
 // service server for worker server
 service Worker {
-    rpc AssignMapTask(AssignMapTaskReq) returns (AssignMapTaskRes);
-    rpc AssignReduceTask(AssignReduceTaskReq) returns (AssignReduceTaskRes);
+    rpc AssignMapTask(AssignMapTaskReq) returns (Result);
+    rpc AssignReduceTask(AssignReduceTaskReq) returns (Result);
     rpc End(Empty) returns (Empty);
+    rpc Health(Empty) returns (HealthRes);
 }
 
 message AssignMapTaskReq {
-
+    repeated MapFileInfo file_info = 1;
 }
 
-message AssignMapTaskRes {
+message Result {
+    string uuid = 1;
+}
 
+message MapFileInfo {
+    string file_name = 1;
+    int64 from = 2;
+    int64 to = 3;
 }
 
 message AssignReduceTaskReq {
 
 }
 
-message AssignReduceTaskRes {
-
-}
-
 message Empty {}
+
+message HealthRes {
+    int64 status = 1;
+}

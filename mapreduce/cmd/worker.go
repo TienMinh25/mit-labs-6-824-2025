@@ -44,10 +44,14 @@ func main() {
 	workerStruct.MasterClient = rpcMasterClient
 
 	// register worker with master
-	workerID := workerStruct.MasterClient.RegisterWorker(&proto_gen.RegisterWorkerReq{
+	workerID, err := workerStruct.MasterClient.RegisterWorker(&proto_gen.RegisterWorkerReq{
 		WorkerIp: workerIP,
 		Uuid:     workerStruct.UUID,
 	})
+
+	if err != nil {
+		log.Fatalf("Register worker with master failed with reason: %v", err.Error())
+	}
 
 	workerStruct.ID = workerID
 
@@ -62,9 +66,10 @@ func main() {
 // load the application Map and Reduce functions
 // from a plugin file, e.g. ../mrapps/wc.so
 func loadPlugin(filename string) (func(string, string) []types.KeyValue, func(string, []string) string) {
+	log.Info(filename)
 	p, err := plugin.Open(filename)
 	if err != nil {
-		log.Fatalf("cannot load plugin %v", filename)
+		log.Fatalf("cannot load plugin %v, err msg: %v", filename, err.Error())
 	}
 	xmapf, err := p.Lookup("Map")
 	if err != nil {

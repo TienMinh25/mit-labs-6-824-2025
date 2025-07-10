@@ -1,10 +1,12 @@
 package mapreduce
 
 import (
+	"bufio"
 	"fmt"
 	"os"
 	"path/filepath"
 
+	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 
@@ -68,4 +70,22 @@ func ParseArgs() ([]string, string, string, string, int, int) {
 	}
 
 	return files, plugin, fmt.Sprintf("127.0.0.1:%v", port), fmt.Sprintf("127.0.0.1:%v", portWorker), nReducer, totalWorker
+}
+
+func LineNums(inputFile string) int {
+	fd, err := os.Open(inputFile)
+
+	if err != nil {
+		log.Tracef("[Master] Have error when open file: %v, err: %s", inputFile, err.Error())
+	}
+	defer fd.Close()
+
+	scanner := bufio.NewScanner(fd)
+	line := 0
+
+	for scanner.Scan() {
+		line++
+	}
+
+	return line
 }
