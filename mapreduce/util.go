@@ -3,6 +3,7 @@ package mapreduce
 import (
 	"bufio"
 	"fmt"
+	"hash/fnv"
 	"os"
 	"path/filepath"
 
@@ -88,4 +89,14 @@ func LineNums(inputFile string) int {
 	}
 
 	return line
+}
+
+//
+// use ihash(key) % NReduce to choose the reduce
+// task number for each KeyValue emitted by Map.
+//
+func IHash(key string) int {
+	h := fnv.New32a()
+	h.Write([]byte(key))
+	return int(h.Sum32() & 0x7fffffff)
 }

@@ -20,6 +20,7 @@ const _ = grpc.SupportPackageIsVersion9
 
 const (
 	Master_RegisterWorker_FullMethodName = "/Master/RegisterWorker"
+	Master_UpdateIMDFiles_FullMethodName = "/Master/UpdateIMDFiles"
 )
 
 // MasterClient is the client API for Master service.
@@ -29,6 +30,7 @@ const (
 // service for master server
 type MasterClient interface {
 	RegisterWorker(ctx context.Context, in *RegisterWorkerReq, opts ...grpc.CallOption) (*RegisterWorkerRes, error)
+	UpdateIMDFiles(ctx context.Context, in *UpdateIMDFilesReq, opts ...grpc.CallOption) (*UpdateResult, error)
 }
 
 type masterClient struct {
@@ -49,6 +51,16 @@ func (c *masterClient) RegisterWorker(ctx context.Context, in *RegisterWorkerReq
 	return out, nil
 }
 
+func (c *masterClient) UpdateIMDFiles(ctx context.Context, in *UpdateIMDFilesReq, opts ...grpc.CallOption) (*UpdateResult, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(UpdateResult)
+	err := c.cc.Invoke(ctx, Master_UpdateIMDFiles_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // MasterServer is the server API for Master service.
 // All implementations must embed UnimplementedMasterServer
 // for forward compatibility.
@@ -56,6 +68,7 @@ func (c *masterClient) RegisterWorker(ctx context.Context, in *RegisterWorkerReq
 // service for master server
 type MasterServer interface {
 	RegisterWorker(context.Context, *RegisterWorkerReq) (*RegisterWorkerRes, error)
+	UpdateIMDFiles(context.Context, *UpdateIMDFilesReq) (*UpdateResult, error)
 	mustEmbedUnimplementedMasterServer()
 }
 
@@ -68,6 +81,9 @@ type UnimplementedMasterServer struct{}
 
 func (UnimplementedMasterServer) RegisterWorker(context.Context, *RegisterWorkerReq) (*RegisterWorkerRes, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method RegisterWorker not implemented")
+}
+func (UnimplementedMasterServer) UpdateIMDFiles(context.Context, *UpdateIMDFilesReq) (*UpdateResult, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpdateIMDFiles not implemented")
 }
 func (UnimplementedMasterServer) mustEmbedUnimplementedMasterServer() {}
 func (UnimplementedMasterServer) testEmbeddedByValue()                {}
@@ -108,6 +124,24 @@ func _Master_RegisterWorker_Handler(srv interface{}, ctx context.Context, dec fu
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Master_UpdateIMDFiles_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateIMDFilesReq)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MasterServer).UpdateIMDFiles(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Master_UpdateIMDFiles_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MasterServer).UpdateIMDFiles(ctx, req.(*UpdateIMDFilesReq))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Master_ServiceDesc is the grpc.ServiceDesc for Master service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -118,6 +152,10 @@ var Master_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "RegisterWorker",
 			Handler:    _Master_RegisterWorker_Handler,
+		},
+		{
+			MethodName: "UpdateIMDFiles",
+			Handler:    _Master_UpdateIMDFiles_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

@@ -1,6 +1,9 @@
 package master
 
-import "github.com/google/uuid"
+import (
+	"github.com/TienMinh25/mit-labs-6-824-2025/mapreduce/proto/proto_gen"
+	"github.com/google/uuid"
+)
 
 type TaskState int
 
@@ -46,4 +49,18 @@ func NewMapTasks(numOfWorkers int) []MapTaskInfo {
 	return res
 }
 
-func (fl FileInfo) toGRPCMsg()
+func (mti *MapTaskInfo) ToGRPCMsg() *proto_gen.AssignMapTaskReq {
+	data := make([]*proto_gen.MapFileInfo, 0)
+
+	for _, fileInfo := range mti.Files {
+		data = append(data, &proto_gen.MapFileInfo{
+			FileName: fileInfo.FileName,
+			From:     int64(fileInfo.From),
+			To:       int64(fileInfo.To),
+		})
+	}
+
+	return &proto_gen.AssignMapTaskReq{
+		FileInfo: data,
+	}
+}

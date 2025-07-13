@@ -5,6 +5,7 @@ option go_package = "./proto_gen";
 // service for master server
 service Master {
     rpc RegisterWorker(RegisterWorkerReq) returns (RegisterWorkerRes);
+    rpc UpdateIMDFiles(UpdateIMDFilesReq) returns (UpdateResult);
 }
 
 message RegisterWorkerReq {
@@ -15,5 +16,16 @@ message RegisterWorkerReq {
 message RegisterWorkerRes {
     bool is_success = 1;
     int64 id = 2;
+}
+
+message UpdateIMDFilesReq {
+    // uuid of worker contains file
+    string uuid = 1;
+    // multiple path file name
+    repeated string filenames = 2;
+}
+
+message UpdateResult {
+    bool result = 1;
 }
 

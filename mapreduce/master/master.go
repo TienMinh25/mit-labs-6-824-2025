@@ -2,6 +2,8 @@ package master
 
 import (
 	"context"
+	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -14,7 +16,7 @@ import (
 // The master needs to manage:
 // - Worker info 			(worker's health, worker's status, IP of worker)
 // - Map task 				(file execute, which worker is doing task, status of task)
-// - Reduce task 			(where is file execute [on which worker?, filename?], status of task)
+// - Reduce task 			(where is file execute [on where worker?, filename?], status of task)
 // Besides that, master need have some attributes like:
 //   - nReduceTask 			(number of reduce tasks)
 //   - nCurrentWorker 	(number of worker is registering master)
@@ -41,6 +43,7 @@ func NewMaster(nTotalWorker int, nReduceTask int) proto_gen.MasterServer {
 		nTotalWorker:   nTotalWorker,
 		nReduceTask:    nReduceTask,
 		WorkerInfo:     []*WorkerInfo{},
+		ReduceTasks:    NewReduceTasks(nReduceTask),
 		workerClient:   NewWorkerRpcClient(),
 		EndChan:        make(chan bool),
 	}
@@ -64,12 +67,45 @@ func (m *Master) RegisterWorker(ctx context.Context, data *proto_gen.RegisterWor
 	}, nil
 }
 
+// UpdateIMDFiles implements proto_gen.MasterServer.
+func (m *Master) UpdateIMDFiles(ctx context.Context, data *proto_gen.UpdateIMDFilesReq) (*proto_gen.UpdateResult, error) {
+	workerIP := m.serviceDiscovery(data.Uuid)
+
+	for _, filename := range data.Filenames {
+		splitReduceName := strings.Split(filename, "-")
+		splitTaskID, err := strconv.Atoi(splitReduceName[len(splitReduceName)-1])
+
+		if err != nil {
+			log.Warn("File name contains reduce task id is not integer type")
+			return nil, err
+		}
+
+		m.ReduceTasks[splitTaskID].Files = append(m.ReduceTasks[splitTaskID].Files, IMDFileInfo{
+			FileName: filename,
+			WorkerIP: workerIP,
+		})
+	}
+
+	return &proto_gen.UpdateResult{
+		Result: true,
+	}, nil
+}
+
 func (m *Master) WaitForEnoughWorker() {
 	log.Trace("[Master] Wait for enough workers")
-	for m.nCurrentWorker < m.nTotalWorker {
-		// loop wait
+	nCurrentWorkers, nTotalWorkers := m.getWorkerNum()
+	for nCurrentWorkers < nTotalWorkers {
+		nCurrentWorkers, nTotalWorkers = m.getWorkerNum()
 	}
 	log.Trace("[Master] Enough workers!")
+}
+
+func (m *Master) getWorkerNum() (int, int) {
+	m.mutex.Lock()
+	nWorkers := m.nCurrentWorker
+	nTotalWorkers := m.nTotalWorker
+	m.mutex.Unlock()
+	return nWorkers, nTotalWorkers
 }
 
 func (m *Master) DistributeWorkload(inputFiles []string) {
@@ -104,7 +140,7 @@ func (m *Master) DistributeWorkload(inputFiles []string) {
 }
 
 func (m *Master) CheckPeriodHealth() {
-	ticker := time.NewTicker(5 * time.Second)
+	ticker := time.NewTicker(20 * time.Second)
 	defer ticker.Stop()
 
 	for {
@@ -116,6 +152,7 @@ func (m *Master) CheckPeriodHealth() {
 			for _, workerInfo := range m.WorkerInfo {
 				workerInfo.mutex.Lock()
 				status := m.workerClient.CheckHealth(workerInfo.WorkerIP)
+				log.Printf("Health from worker %v is %v", workerInfo.WorkerIP, status)
 				workerInfo.WorkerStatus = status
 				workerInfo.mutex.Unlock()
 			}
@@ -126,20 +163,126 @@ func (m *Master) CheckPeriodHealth() {
 func (m *Master) DistributeMapTask() {
 	log.Trace("[Master] Start assign map task to worker")
 
-	// y tuong la assign task cho worker, neu worker ko reply -> cu cho la no die va assign lai task cho worker khac
-	// cu lap di lap lai nhu vay cho den khi map task hoan thanh
-	
+	mapTaskFailed := make(chan *MapTaskInfo, 100)
 
-	// muon co the assign task cho worker khac -> can biet worker nao available -> tuc la worker nao dang ranh de co the assign
-	// thong tin ve task duoc assign cho worker can phai duoc luu lai
-	// thong tin ve worker nao fail co the duoc luu lai -> or maybe luu lai channel cho map task cai nao fail chu ko can
-	// luu lai thong tin ve worker nao fail -> co 2 huong
-	// tuy nhien vi 
+	totalWorkerAvailable, workers := m.getAvailableWorkers(m.nTotalWorker)
+	workerID := 0
+	countDoneMapTasks := 0
+	var mutexCountDone sync.Mutex
 
-	// can 1 cai bucket nao day de luu tru lai cac cai map task failed va reassign lai cho worker khac
 	for idx := range m.MapTasks {
 		m.MapTasks[idx].State = TASK_IN_PROGRESS
 
+		go func(data *MapTaskInfo, workerID int) {
+			msg := data.ToGRPCMsg()
+			workers[workerID].UpdateStatus(WORKER_BUSY)
+			isDone := m.workerClient.AssignMapTask(msg, workers[workerID].WorkerIP)
+
+			if isDone {
+				data.State = TASK_COMPLETED
+				workers[workerID].UpdateStatus(WORKER_IDLE)
+				log.Println("done map task")
+				mutexCountDone.Lock()
+				countDoneMapTasks++
+				mutexCountDone.Unlock()
+			} else {
+				workers[workerID].UpdateStatus(WORKER_UNKNOWN)
+				data.State = TASK_TO_DO
+				mapTaskFailed <- &m.MapTasks[idx]
+			}
+
+		}(&m.MapTasks[idx], workerID)
+
+		workerID = (workerID + 1) % totalWorkerAvailable
 	}
-	
+
+	done := make(chan int, 100)
+
+Loop:
+	for {
+		select {
+		case mapTaskRetry, more := <-mapTaskFailed:
+			if more {
+				log.Infof("[Master] Re-execute Map Task %v", mapTaskRetry.UUID)
+
+				_, workers := m.getAvailableWorkers(1)
+				mapTaskRetry.State = TASK_IN_PROGRESS
+
+				go func(data *MapTaskInfo) {
+					msg := data.ToGRPCMsg()
+					isDone := m.workerClient.AssignMapTask(msg, workers[0].WorkerIP)
+
+					if !isDone {
+						workers[0].UpdateStatus(WORKER_UNKNOWN)
+						data.State = TASK_TO_DO
+						mapTaskFailed <- data
+					} else {
+						data.State = TASK_COMPLETED
+						workers[0].UpdateStatus(WORKER_IDLE)
+						done <- 1
+					}
+				}(mapTaskRetry)
+			} else {
+				break Loop
+			}
+		case <-done:
+			mutexCountDone.Lock()
+			countDoneMapTasks++
+			if countDoneMapTasks == len(m.MapTasks) {
+				close(mapTaskFailed)
+			}
+			mutexCountDone.Unlock()
+		}
+	}
+
+	log.Printf("[Master]: End distributed map task and process map task!")
+}
+
+func (m *Master) getAvailableWorkers(numWorkers int) (int, []*WorkerInfo) {
+	log.Infof("[Master] Finding available workers to execute %v / %v", numWorkers, len(m.WorkerInfo))
+
+	res := make([]*WorkerInfo, 0)
+
+OuterLoop:
+	for {
+		total := 0
+		broken := 0
+
+		for _, worker := range m.WorkerInfo {
+			if worker.IsAvailable() {
+				total += 1
+				res = append(res, worker)
+			} else if worker.IsBroken() {
+				log.Infof("Worker ip: %v, status: %v", worker.WorkerIP, worker.WorkerStatus)
+				broken += 1
+			}
+
+			if total >= numWorkers {
+				log.Println("[Master] Finding enough available workers to execute!")
+				break OuterLoop
+			}
+		}
+
+		if broken == len(m.WorkerInfo) {
+			log.Panic("Not enough worker to execute!")
+		}
+
+		log.Infof("[Master] Only %d/%d workers available, waiting...", total, numWorkers)
+		time.Sleep(2 * time.Second)
+	}
+
+	return len(res), res
+}
+
+func (m *Master) serviceDiscovery(uuid string) string {
+	res := ""
+
+	for _, worker := range m.WorkerInfo {
+		if worker.UUID == uuid {
+			res = worker.WorkerIP
+			break
+		}
+	}
+
+	return res
 }

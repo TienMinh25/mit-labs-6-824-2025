@@ -58,3 +58,11 @@ func (w *WorkerInfo) IsAvailable() bool {
 	w.mutex.Unlock()
 	return isAvailable
 }
+
+func (w *WorkerInfo) IsBroken() bool {
+	w.mutex.Lock()
+	isBroken := w.WorkerStatus == WORKER_UNKNOWN
+	w.mutex.Unlock()
+
+	return isBroken
+}

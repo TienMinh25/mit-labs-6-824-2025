@@ -39,15 +39,11 @@ func main() {
 	// assign map and reduce plugin to worker
 	workerStruct.Mapf, workerStruct.Reducef = loadPlugin(pluginFile)
 
-	// create master client and assign master client to worker
-	rpcMasterClient := worker.NewRPCMasterClient(masterIP, workerStruct.UUID, workerIP)
-	workerStruct.MasterClient = rpcMasterClient
-
 	// register worker with master
 	workerID, err := workerStruct.MasterClient.RegisterWorker(&proto_gen.RegisterWorkerReq{
 		WorkerIp: workerIP,
 		Uuid:     workerStruct.UUID,
-	})
+	}, masterIP)
 
 	if err != nil {
 		log.Fatalf("Register worker with master failed with reason: %v", err.Error())

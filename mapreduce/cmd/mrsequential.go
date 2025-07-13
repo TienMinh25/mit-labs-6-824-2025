@@ -13,6 +13,7 @@ import (
 	"os"
 	"plugin"
 	"sort"
+	"time"
 
 	"github.com/TienMinh25/mit-labs-6-824-2025/mapreduce/types"
 )
@@ -61,7 +62,7 @@ func main() {
 
 	sort.Sort(ByKey(intermediate))
 
-	oname := "mr-out-0"
+	oname := "./mapreduce/output/temp/mr-out-0"
 	ofile, _ := os.Create(oname)
 
 	//
@@ -86,6 +87,9 @@ func main() {
 		i = j
 	}
 
+	if err := os.Rename("mapreduce/output/temp/mr-out-0", "mapreduce/output/mr-out-0"); err != nil {
+		fmt.Println(err)
+	}
 	ofile.Close()
 }
 

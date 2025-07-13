@@ -16,6 +16,7 @@ message AssignMapTaskReq {
 
 message Result {
     string uuid = 1;
+    bool result = 2;
 }
 
 message MapFileInfo {
