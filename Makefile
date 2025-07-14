@@ -26,11 +26,11 @@ run-with-wc:
 	trap "cleanup 1" ERR; \
 	trap "cleanup 0" SIGINT SIGTERM; \
 	\
-	go run mapreduce/cmd/master.go mr -i "mapreduce/input/pg-*.txt" -p mapreduce/mrapps/wc.so -w 4 -m 40000 -r 2 & \
+	go run mapreduce/cmd/master.go mr -i "mapreduce/input/pg-*.txt" -p mapreduce/mrapps/wc.so -w 4 -m 40000 -r 1 & \
 	sleep 2; \
 	\
 	for port in 40001 40002 40003 40004; do \
-		go run mapreduce/cmd/worker.go mr -i "mapreduce/input/pg-*.txt" -p mapreduce/mrapps/wc.so -w 4 -P $$port -r 2 & \
+		go run mapreduce/cmd/worker.go mr -i "mapreduce/input/pg-*.txt" -p mapreduce/mrapps/wc.so -w 4 -P $$port -r 1 & \
 		sleep 0.5; \
 	done; \
 	\

@@ -2,7 +2,6 @@ package main
 
 import (
 	"net"
-	"sync"
 
 	"github.com/TienMinh25/mit-labs-6-824-2025/mapreduce"
 	"github.com/TienMinh25/mit-labs-6-824-2025/mapreduce/master"
@@ -35,8 +34,6 @@ func main() {
 
 	masterStruct := ms.(*master.Master)
 
-	log.Printf("Length of imd files is %v", len(masterStruct.ReduceTasks))
-
 	// TODO: wait enough worker registers =)) because we need to distribute workload across all workers
 	masterStruct.WaitForEnoughWorker()
 
@@ -53,6 +50,8 @@ func main() {
 	masterStruct.DistributeReduceTask()
 
 	// TODO: after done, send signal worker to terminal (graceful shutdown)
-
 	masterStruct.EndChan <- true
+	masterStruct.EndWorker()
+
+	baseServer.GracefulStop()
 }

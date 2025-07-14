@@ -168,7 +168,9 @@ func (m *Master) DistributeMapTask() {
 	totalWorkerAvailable, workers := m.getAvailableWorkers(m.nTotalWorker)
 	workerID := 0
 	countDoneMapTasks := 0
-	var mutexCountDone sync.Mutex
+
+	done := make(chan int, 100)
+	defer close(done)
 
 	for idx := range m.MapTasks {
 		m.MapTasks[idx].State = TASK_IN_PROGRESS
@@ -181,9 +183,7 @@ func (m *Master) DistributeMapTask() {
 			if isDone {
 				data.State = TASK_COMPLETED
 				workers[workerID].UpdateStatus(WORKER_IDLE)
-				mutexCountDone.Lock()
-				countDoneMapTasks++
-				mutexCountDone.Unlock()
+				done <- 1
 			} else {
 				workers[workerID].UpdateStatus(WORKER_UNKNOWN)
 				data.State = TASK_TO_DO
@@ -195,43 +195,38 @@ func (m *Master) DistributeMapTask() {
 		workerID = (workerID + 1) % totalWorkerAvailable
 	}
 
-	done := make(chan int, 100)
-	defer close(done)
-
 Loop:
 	for {
 		select {
 		case mapTaskRetry, more := <-mapTaskFailed:
-			if more {
-				log.Infof("[Master] Re-execute Map Task %v", mapTaskRetry.UUID)
-
-				_, workers := m.getAvailableWorkers(1)
-				mapTaskRetry.State = TASK_IN_PROGRESS
-
-				go func(data *MapTaskInfo) {
-					msg := data.ToGRPCMsg()
-					isDone := m.workerClient.AssignMapTask(msg, workers[0].WorkerIP)
-
-					if !isDone {
-						workers[0].UpdateStatus(WORKER_UNKNOWN)
-						data.State = TASK_TO_DO
-						mapTaskFailed <- data
-					} else {
-						data.State = TASK_COMPLETED
-						workers[0].UpdateStatus(WORKER_IDLE)
-						done <- 1
-					}
-				}(mapTaskRetry)
-			} else {
+			if !more {
 				break Loop
 			}
+			
+			log.Infof("[Master] Re-execute Map Task %v", mapTaskRetry.UUID)
+
+			_, workers := m.getAvailableWorkers(1)
+			mapTaskRetry.State = TASK_IN_PROGRESS
+
+			go func(data *MapTaskInfo) {
+				msg := data.ToGRPCMsg()
+				isDone := m.workerClient.AssignMapTask(msg, workers[0].WorkerIP)
+
+				if !isDone {
+					workers[0].UpdateStatus(WORKER_UNKNOWN)
+					data.State = TASK_TO_DO
+					mapTaskFailed <- data
+				} else {
+					data.State = TASK_COMPLETED
+					workers[0].UpdateStatus(WORKER_IDLE)
+					done <- 1
+				}
+			}(mapTaskRetry)
 		case <-done:
-			mutexCountDone.Lock()
 			countDoneMapTasks++
 			if countDoneMapTasks == len(m.MapTasks) {
 				close(mapTaskFailed)
 			}
-			mutexCountDone.Unlock()
 		}
 	}
 
@@ -244,8 +239,10 @@ func (m *Master) DistributeReduceTask() {
 	reduceTaskFailed := make(chan *ReduceTaskInfo, 100)
 	totalWorkerAvailable, workers := m.getAvailableWorkers(m.nTotalWorker)
 	workerID := 0
+
+	done := make(chan int, 100)
+	defer close(done)
 	countDoneReduceTasks := 0
-	var mutexCountDone sync.Mutex
 
 	for idx := range m.ReduceTasks {
 		// set status for task
@@ -261,9 +258,7 @@ func (m *Master) DistributeReduceTask() {
 			if isDone {
 				workers[workerID].UpdateStatus(WORKER_IDLE)
 				data.State = TASK_COMPLETED
-				mutexCountDone.Lock()
-				countDoneReduceTasks++
-				mutexCountDone.Unlock()
+				done <- 1
 			} else {
 				workers[workerID].UpdateStatus(WORKER_UNKNOWN)
 				data.State = TASK_TO_DO
@@ -275,45 +270,39 @@ func (m *Master) DistributeReduceTask() {
 		workerID = (workerID + 1) % totalWorkerAvailable
 	}
 
-	done := make(chan int, 100)
-	defer close(done)
-
 Loop:
 	for {
 		select {
 		case reduceTaskRetry, more := <-reduceTaskFailed:
+			if !more {
+				break Loop
+			}
+
 			log.Infof("[Master] Re-execute Reduce Task, files: [%v]", reduceTaskRetry.Files)
 
 			reduceTaskRetry.State = TASK_IN_PROGRESS
 			_, workers := m.getAvailableWorkers(1)
+			workers[0].UpdateStatus(WORKER_BUSY)
 
-			if more {
-				workers[0].UpdateStatus(WORKER_BUSY)
+			isDone := m.workerClient.AssignReduceTask(&proto_gen.AssignReduceTaskReq{
+				FileInfo: reduceTaskRetry.ToGRPCMsg(),
+			}, workers[0].WorkerIP)
 
-				isDone := m.workerClient.AssignReduceTask(&proto_gen.AssignReduceTaskReq{
-					FileInfo: reduceTaskRetry.ToGRPCMsg(),
-				}, workers[0].WorkerIP)
-
-				if isDone {
-					reduceTaskRetry.State = TASK_COMPLETED
-					workers[0].UpdateStatus(WORKER_IDLE)
-					done <- 1
-				} else {
-					reduceTaskRetry.State = TASK_IN_PROGRESS
-					workers[0].UpdateStatus(WORKER_UNKNOWN)
-					reduceTaskFailed <- reduceTaskRetry
-				}
+			if isDone {
+				reduceTaskRetry.State = TASK_COMPLETED
+				workers[0].UpdateStatus(WORKER_IDLE)
+				done <- 1
 			} else {
-				break Loop
+				reduceTaskRetry.State = TASK_IN_PROGRESS
+				workers[0].UpdateStatus(WORKER_UNKNOWN)
+				reduceTaskFailed <- reduceTaskRetry
 			}
 		case <-done:
-			mutexCountDone.Lock()
 			countDoneReduceTasks++
 
 			if countDoneReduceTasks == m.nReduceTask {
 				close(reduceTaskFailed)
 			}
-			mutexCountDone.Unlock()
 		}
 	}
 
@@ -367,4 +356,14 @@ func (m *Master) serviceDiscovery(uuid string) string {
 	}
 
 	return res
+}
+
+func (m *Master) EndWorker() {
+	for _, workerInfo := range m.WorkerInfo {
+		if isShutDown := m.workerClient.End(workerInfo.WorkerIP); !isShutDown {
+			log.Warnf("Worker %v shutdown failed", workerInfo.WorkerIP)
+		}
+
+		log.Infof("Worker %v shutdown successfully", workerInfo.WorkerIP)
+	}
 }
