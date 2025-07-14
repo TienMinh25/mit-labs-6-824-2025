@@ -341,7 +341,7 @@ OuterLoop:
 		}
 
 		if broken == len(m.WorkerInfo) {
-			log.Panic("Not enough worker to execute!")
+			log.Warn("Not enough worker to execute!")
 		}
 
 		log.Infof("[Master] Only %d/%d workers available, waiting...", total, numWorkers)

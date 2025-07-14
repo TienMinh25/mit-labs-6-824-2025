@@ -51,8 +51,8 @@ then
 fi
 
 # run the test in a fresh sub-directory.
-rm -rf mapreduce/output/temp
-mkdir -p mapreduce/output/temp || exit 1
+rm -rf output/temp
+mkdir -p output/temp || exit 1
 rm -f output/mr-*
 
 # make sure software is freshly built.
