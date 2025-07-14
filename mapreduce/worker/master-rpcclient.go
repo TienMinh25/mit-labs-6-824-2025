@@ -74,18 +74,18 @@ func (m *masterClient) RegisterWorker(data *proto_gen.RegisterWorkerReq, masterI
 }
 
 func (m *masterClient) UpdateIDMFiles(data *proto_gen.UpdateIMDFilesReq, masterIP string) bool {
-	log.Tracef("Worker ip: %v is update immediate files", data.Uuid)
+	log.Tracef("Worker ip: %v is update intermediate files", data.Uuid)
 
 	client, conn := m.Connect(masterIP)
 	defer conn.Close()
-	
+
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
-	
+
 	result, err := client.UpdateIMDFiles(ctx, data)
 
 	if err != nil {
-		log.Fatalf("Update immediate files failed, err: %v", err)
+		log.Fatalf("Update intermediate files failed, err: %v", err)
 	}
 
 	return result.Result

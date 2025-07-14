@@ -61,7 +61,7 @@ func (m *Master) RegisterWorker(ctx context.Context, data *proto_gen.RegisterWor
 
 	return &proto_gen.RegisterWorkerRes{
 		IsSuccess: true,
-		// return for worker, id is used to gen file out for immediately files from phase map
+		// return for worker, id is used to gen file out for intermediate files from phase map
 		// and final files from phase reduce
 		Id: int64(m.nCurrentWorker - 1),
 	}, nil
