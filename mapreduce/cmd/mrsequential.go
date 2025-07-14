@@ -61,7 +61,7 @@ func main() {
 
 	sort.Sort(ByKey(intermediate))
 
-	oname := "./mapreduce/output/temp/mr-out-0"
+	oname := "output/mr-out-0"
 	ofile, _ := os.Create(oname)
 
 	//
@@ -84,10 +84,6 @@ func main() {
 		fmt.Fprintf(ofile, "%v %v\n", intermediate[i].Key, output)
 
 		i = j
-	}
-
-	if err := os.Rename("mapreduce/output/temp/mr-out-0", "mapreduce/output/mr-out-0"); err != nil {
-		fmt.Println(err)
 	}
 	ofile.Close()
 }
