@@ -181,7 +181,6 @@ func (m *Master) DistributeMapTask() {
 			if isDone {
 				data.State = TASK_COMPLETED
 				workers[workerID].UpdateStatus(WORKER_IDLE)
-				log.Println("done map task")
 				mutexCountDone.Lock()
 				countDoneMapTasks++
 				mutexCountDone.Unlock()
@@ -197,6 +196,7 @@ func (m *Master) DistributeMapTask() {
 	}
 
 	done := make(chan int, 100)
+	defer close(done)
 
 Loop:
 	for {
@@ -235,7 +235,89 @@ Loop:
 		}
 	}
 
-	log.Printf("[Master]: End distributed map task and process map task!")
+	log.Trace("[Master]: End distributed map task and process map task!")
+}
+
+func (m *Master) DistributeReduceTask() {
+	log.Trace("[Master] Start assign reduce task to worker")
+
+	reduceTaskFailed := make(chan *ReduceTaskInfo, 100)
+	totalWorkerAvailable, workers := m.getAvailableWorkers(m.nTotalWorker)
+	workerID := 0
+	countDoneReduceTasks := 0
+	var mutexCountDone sync.Mutex
+
+	for idx := range m.ReduceTasks {
+		// set status for task
+		m.ReduceTasks[idx].State = TASK_IN_PROGRESS
+
+		go func(data *ReduceTaskInfo, workerID int) {
+			workers[workerID].UpdateStatus(WORKER_BUSY)
+
+			isDone := m.workerClient.AssignReduceTask(&proto_gen.AssignReduceTaskReq{
+				FileInfo: data.ToGRPCMsg(),
+			}, workers[workerID].WorkerIP)
+
+			if isDone {
+				workers[workerID].UpdateStatus(WORKER_IDLE)
+				data.State = TASK_COMPLETED
+				mutexCountDone.Lock()
+				countDoneReduceTasks++
+				mutexCountDone.Unlock()
+			} else {
+				workers[workerID].UpdateStatus(WORKER_UNKNOWN)
+				data.State = TASK_TO_DO
+				reduceTaskFailed <- data
+			}
+
+		}(&m.ReduceTasks[idx], workerID)
+
+		workerID = (workerID + 1) % totalWorkerAvailable
+	}
+
+	done := make(chan int, 100)
+	defer close(done)
+
+Loop:
+	for {
+		select {
+		case reduceTaskRetry, more := <-reduceTaskFailed:
+			log.Infof("[Master] Re-execute Reduce Task, files: [%v]", reduceTaskRetry.Files)
+
+			reduceTaskRetry.State = TASK_IN_PROGRESS
+			_, workers := m.getAvailableWorkers(1)
+
+			if more {
+				workers[0].UpdateStatus(WORKER_BUSY)
+
+				isDone := m.workerClient.AssignReduceTask(&proto_gen.AssignReduceTaskReq{
+					FileInfo: reduceTaskRetry.ToGRPCMsg(),
+				}, workers[0].WorkerIP)
+
+				if isDone {
+					reduceTaskRetry.State = TASK_COMPLETED
+					workers[0].UpdateStatus(WORKER_IDLE)
+					done <- 1
+				} else {
+					reduceTaskRetry.State = TASK_IN_PROGRESS
+					workers[0].UpdateStatus(WORKER_UNKNOWN)
+					reduceTaskFailed <- reduceTaskRetry
+				}
+			} else {
+				break Loop
+			}
+		case <-done:
+			mutexCountDone.Lock()
+			countDoneReduceTasks++
+
+			if countDoneReduceTasks == m.nReduceTask {
+				close(reduceTaskFailed)
+			}
+			mutexCountDone.Unlock()
+		}
+	}
+
+	log.Trace("[Master]: End distributed reduce task and process reduce task!")
 }
 
 func (m *Master) getAvailableWorkers(numWorkers int) (int, []*WorkerInfo) {

@@ -50,11 +50,7 @@ func main() {
 	masterStruct.DistributeMapTask()
 
 	// TODO: distributed reduce task for worker (handle fault tolerance)
-	var wg sync.WaitGroup
-
-	wg.Add(1)
-
-	wg.Wait()
+	masterStruct.DistributeReduceTask()
 
 	// TODO: after done, send signal worker to terminal (graceful shutdown)
 

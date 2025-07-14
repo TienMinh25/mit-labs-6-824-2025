@@ -139,6 +139,21 @@ Loop:
 	}, nil
 }
 
+func (w *Worker) AssignReduceTask(_ context.Context, data *proto_gen.AssignReduceTaskReq) (*proto_gen.Result, error) {
+	log.Printf("[Worker] Worker %v start doing reduce task", w.ID)
+	w.mux.Lock()
+	w.WorkerStatus = master.WORKER_BUSY
+	w.mux.Unlock()
+
+	// read contents from other workers that contains file
+	
+	// combine contents and sort contents
+
+	// write to final files
+
+	return nil, nil
+}
+
 func (w *Worker) readPartitionContent(filename string, startOffset, endOffset int64) string {
 	fd, err := os.Open(filename)
 
@@ -187,7 +202,7 @@ func (w *Worker) writeFilesParallel(imdKVs [][]types.KeyValue, workerID int) []s
 			tempFileName := tempFile.Name()
 			defer os.Remove(tempFileName)
 
-			outputFile := fmt.Sprintf("./mapreduce/output/mr-%v-%v", workerID, mapReduceID)
+			outputFile := fmt.Sprintf("./mapreduce/output/mr-imd-%v-%v", workerID, mapReduceID)
 
 			if _, err = tempFile.Write(content_byte); err != nil {
 				tempFile.Close()

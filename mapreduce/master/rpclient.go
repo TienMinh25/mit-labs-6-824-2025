@@ -15,6 +15,7 @@ type IWorkerRpcClient interface {
 	Connect(workerIP string) (*grpc.ClientConn, proto_gen.WorkerClient)
 	CheckHealth(workerIP string) WorkerStatus
 	AssignMapTask(data *proto_gen.AssignMapTaskReq, workerIP string) bool
+	AssignReduceTask(data *proto_gen.AssignReduceTaskReq, workerIP string) bool
 }
 
 type workerRpcClient struct {
@@ -78,6 +79,28 @@ func (client *workerRpcClient) AssignMapTask(data *proto_gen.AssignMapTaskReq, w
 	defer cancel()
 
 	r, err := c.AssignMapTask(ctx, data)
+
+	if err != nil {
+		status, _ := status.FromError(err)
+
+		log.Warn("[Master]: " + status.Message())
+
+		return false
+	}
+
+	return r.Result
+}
+
+func (client *workerRpcClient) AssignReduceTask(data *proto_gen.AssignReduceTaskReq, workerIP string) bool {
+	log.Tracef("[Master] Start assigned reduce task for worker: %v", workerIP)
+
+	conn, c := client.Connect(workerIP)
+	defer conn.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+
+	r, err := c.AssignReduceTask(ctx, data)
 
 	if err != nil {
 		status, _ := status.FromError(err)
