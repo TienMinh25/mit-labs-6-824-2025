@@ -69,6 +69,12 @@ func (m *Master) RegisterWorker(ctx context.Context, data *proto_gen.RegisterWor
 
 // UpdateIMDFiles implements proto_gen.MasterServer.
 func (m *Master) UpdateIMDFiles(ctx context.Context, data *proto_gen.UpdateIMDFilesReq) (*proto_gen.UpdateResult, error) {
+	if m.WorkerInfo[data.Id].IsBroken() {
+		return &proto_gen.UpdateResult{
+			Result: false,
+		}, nil
+	}
+
 	workerIP := m.serviceDiscovery(data.Uuid)
 
 	for _, filename := range data.Filenames {
@@ -202,7 +208,7 @@ Loop:
 			if !more {
 				break Loop
 			}
-			
+
 			log.Infof("[Master] Re-execute Map Task %v", mapTaskRetry.UUID)
 
 			_, workers := m.getAvailableWorkers(1)

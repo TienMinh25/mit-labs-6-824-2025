@@ -23,6 +23,8 @@ message UpdateIMDFilesReq {
     string uuid = 1;
     // multiple path file name
     repeated string filenames = 2;
+    // id of worker followed index
+    int64 id = 3;
 }
 
 message UpdateResult {

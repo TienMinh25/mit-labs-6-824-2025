@@ -130,10 +130,13 @@ Loop:
 	updateSuccess := w.MasterClient.UpdateIDMFiles(&proto_gen.UpdateIMDFilesReq{
 		Uuid:      w.UUID,
 		Filenames: fileIMDs,
+		Id:        int64(w.ID),
 	}, w.MasterIP)
 
 	if updateSuccess {
 		log.Infof("[Worker] Update intermediate files successfully [filenames: %v, worker-id: %v]", fileIMDs, w.ID)
+	} else {
+		log.Infof("[Worker] Update intermediate files failed because worker is in WORKER_UNKNOWN before!")
 	}
 
 	w.mux.Lock()
@@ -211,7 +214,7 @@ Loop:
 
 	reduceTaskIdStrs := strings.Split(data.FileInfo[0].FileName, "-")
 	reduceTaskId := reduceTaskIdStrs[len(reduceTaskIdStrs)-1]
-	outputFinal := fmt.Sprintf("mapreduce/output/mr-out-%v-%s", w.ID, reduceTaskId)
+	outputFinal := fmt.Sprintf("mapreduce/output/mr-out-%s", reduceTaskId)
 
 	tempFile, err := os.CreateTemp("./mapreduce/output/temp/", "mr-temp-*")
 	if err != nil {
