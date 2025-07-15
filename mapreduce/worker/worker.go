@@ -214,9 +214,9 @@ Loop:
 
 	reduceTaskIdStrs := strings.Split(data.FileInfo[0].FileName, "-")
 	reduceTaskId := reduceTaskIdStrs[len(reduceTaskIdStrs)-1]
-	outputFinal := fmt.Sprintf("mapreduce/output/mr-out-%s", reduceTaskId)
+	outputFinal := fmt.Sprintf("output/mr-out-%s", reduceTaskId)
 
-	tempFile, err := os.CreateTemp("./mapreduce/output/temp/", "mr-temp-*")
+	tempFile, err := os.CreateTemp("output/temp/", "mr-temp-*")
 	if err != nil {
 		log.Panicf("create temp file error: %v", err)
 	}
@@ -313,11 +313,11 @@ func (w *Worker) readPartitionContent(filename string, startOffset, endOffset in
 	var line int64 = 0
 
 	for scanner.Scan() {
-		if line > endOffset {
+		if line >= endOffset {
 			break
 		}
 
-		if line >= startOffset && line <= endOffset {
+		if line >= startOffset && line < endOffset {
 			contents += scanner.Text() + "\n"
 		}
 
@@ -339,7 +339,7 @@ func (w *Worker) writeFilesParallel(imdKVs [][]types.KeyValue, workerID int) []s
 			defer wg.Done()
 			content_byte, _ := json.Marshal(imdSubKVs)
 
-			tempFile, err := os.CreateTemp("./mapreduce/output/temp/", "mr-temp-*")
+			tempFile, err := os.CreateTemp("output/temp/", "mr-temp-*")
 			if err != nil {
 				log.Panicf("create temp file error: %v", err)
 			}
@@ -347,7 +347,7 @@ func (w *Worker) writeFilesParallel(imdKVs [][]types.KeyValue, workerID int) []s
 			tempFileName := tempFile.Name()
 			defer os.Remove(tempFileName)
 
-			outputFile := fmt.Sprintf("./mapreduce/output/mr-imd-%v-%v", workerID, mapReduceID)
+			outputFile := fmt.Sprintf("output/mr-imd-%v-%v", workerID, mapReduceID)
 
 			if _, err = tempFile.Write(content_byte); err != nil {
 				tempFile.Close()
