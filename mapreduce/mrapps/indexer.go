@@ -37,5 +37,18 @@ func Map(document string, value string) (res []types.KeyValue) {
 // should be a single output value for that key.
 func Reduce(key string, values []string) string {
 	sort.Strings(values)
-	return fmt.Sprintf("%d %s", len(values), strings.Join(values, ","))
+
+	i := 0
+	res := []string{values[i]}
+
+	for j := i + 1; j < len(values); j++ {
+		if values[i] == values[j] {
+			continue
+		}
+
+		i = j
+		res = append(res, values[j])
+	}
+
+	return fmt.Sprintf("%d %s", len(res), strings.Join(res, ","))
 }

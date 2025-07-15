@@ -12,7 +12,7 @@ import (
 )
 
 type IRpcClient interface {
-	Connect(ip string) (proto_gen.MasterClient, *grpc.ClientConn)
+	Connect(ip string) (proto_gen.MasterClient, *grpc.ClientConn, error)
 	RegisterWorker(data *proto_gen.RegisterWorkerReq, masterIP string) (int, error)
 	UpdateIDMFiles(data *proto_gen.UpdateIMDFilesReq, masterIP string) bool
 }
@@ -24,25 +24,29 @@ func NewRPCMasterClient() IRpcClient {
 	return &masterClient{}
 }
 
-func (client *masterClient) Connect(ip string) (proto_gen.MasterClient, *grpc.ClientConn) {
+func (client *masterClient) Connect(ip string) (proto_gen.MasterClient, *grpc.ClientConn, error) {
 	clientConn, err := grpc.NewClient(ip, grpc.WithTransportCredentials(insecure.NewCredentials()))
 
 	if err != nil {
-		log.Fatalf("Connect server [ip: %v] failed!\n", ip)
+		log.Warnf("Connect server [ip: %v] failed!\n", ip)
+		return nil, nil, err
 	}
 
-	return proto_gen.NewMasterClient(clientConn), clientConn
+	return proto_gen.NewMasterClient(clientConn), clientConn, nil
 }
 
 // RegisterWorker implements IRpcClient.
 func (m *masterClient) RegisterWorker(data *proto_gen.RegisterWorkerReq, masterIP string) (int, error) {
 	log.Tracef("Worker ip: %v is starting to register master", data.WorkerIp)
 
-	client, conn := m.Connect(masterIP)
+	client, conn, err := m.Connect(masterIP)
+	if err != nil {
+		return 0, err
+	}
+
 	defer conn.Close()
 
 	var res *proto_gen.RegisterWorkerRes
-	var err error
 
 	for retry := 1; retry <= 3; retry++ {
 		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
@@ -76,7 +80,10 @@ func (m *masterClient) RegisterWorker(data *proto_gen.RegisterWorkerReq, masterI
 func (m *masterClient) UpdateIDMFiles(data *proto_gen.UpdateIMDFilesReq, masterIP string) bool {
 	log.Tracef("Worker ip: %v is update intermediate files", data.Uuid)
 
-	client, conn := m.Connect(masterIP)
+	client, conn, err  := m.Connect(masterIP)
+	if err != nil {
+		return false
+	}
 	defer conn.Close()
 
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)

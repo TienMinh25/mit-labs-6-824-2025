@@ -57,7 +57,7 @@ func main() {
 
 	// Sleep for a while for waiting the End Grpc response sent to master
 	time.Sleep(500 * time.Millisecond)
-	baseServer.GracefulStop()
+	baseServer.Stop()
 }
 
 // load the application Map and Reduce functions

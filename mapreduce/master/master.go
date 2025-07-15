@@ -8,6 +8,7 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
+	"google.golang.org/grpc"
 
 	"github.com/TienMinh25/mit-labs-6-824-2025/mapreduce"
 	"github.com/TienMinh25/mit-labs-6-824-2025/mapreduce/proto/proto_gen"
@@ -375,5 +376,5 @@ func (m *Master) EndWorker(baseServer *grpc.Server) {
 		log.Infof("Worker %v shutdown successfully", workerInfo.WorkerIP)
 	}
 
-	baseServer.GracefulStop()
+	baseServer.Stop()
 }
