@@ -84,7 +84,7 @@ func (client *workerRpcClient) AssignMapTask(data *proto_gen.AssignMapTaskReq, w
 	if err != nil {
 		status, _ := status.FromError(err)
 
-		log.Warn("[Master]: " + status.Message())
+		log.Warn("[Master]: Error from map task: " + status.Message())
 
 		return false
 	}
@@ -106,7 +106,7 @@ func (client *workerRpcClient) AssignReduceTask(data *proto_gen.AssignReduceTask
 	if err != nil {
 		status, _ := status.FromError(err)
 
-		log.Warn("[Master]: " + status.Message())
+		log.Warn("[Master]: Error from reduce task: " + status.Message())
 
 		return false
 	}
@@ -128,7 +128,7 @@ func (client *workerRpcClient) End(workerIP string) bool {
 	if err != nil {
 		status, _ := status.FromError(err)
 
-		log.Warn("[Master]: " + status.Message())
+		log.Warn("[Master]: Error from end: " + status.Message())
 
 		return false
 	}

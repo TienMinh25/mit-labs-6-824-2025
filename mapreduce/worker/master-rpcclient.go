@@ -2,7 +2,6 @@ package worker
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/TienMinh25/mit-labs-6-824-2025/mapreduce/proto/proto_gen"
@@ -69,10 +68,6 @@ func (m *masterClient) RegisterWorker(data *proto_gen.RegisterWorkerReq, masterI
 
 	log.Errorf("Worker ip: %v failed to register after 3 attempts", data.WorkerIp)
 	log.Tracef("Worker ip: %v register end", data.WorkerIp)
-
-	if err != nil {
-		return 0, fmt.Errorf("register worker failed: %w", err)
-	}
 
 	return 0, err
 }

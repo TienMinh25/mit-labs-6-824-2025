@@ -286,46 +286,46 @@ rm -f output/mr-*
 rm -rf anydone*
 
 #########################################################
-# echo '***' Starting crash test.
+echo '***' Starting crash test.
 
-# # generate the correct output
-# ./cmd/mrsequential mrapps/nocrash.so input/pg*.txt || exit 1
-# sort output/mr-out-0 > output/mr-correct-crash.txt
-# rm -f output/mr-out*
+# generate the correct output
+./cmd/mrsequential mrapps/nocrash.so input/pg*.txt || exit 1
+sort output/mr-out-0 > output/mr-correct-crash.txt
+rm -f output/mr-out*
 
-# rm -f output/mr-done
+rm -f output/mr-done
 
-# # Start master in background
-# (maybe_quiet $TIMEOUT2 ./cmd/master mr -i "input/pg*txt" -p mrapps/crash.so -w 10 -r 1 -m 40000; touch output/mr-done) &
+# Start master in background
+(maybe_quiet $TIMEOUT2 ./cmd/master mr -i "input/pg*txt" -p mrapps/crash.so -w 1 -r 1 -m 40000; touch output/mr-done) &
 
-# sleep 1
+sleep 1
 
-# # start multiple workers that may crash
-# maybe_quiet $TIMEOUT2 ./cmd/worker mr -i "input/pg*txt" -p mrapps/crash.so -w 1 -r 1 -P 40001 &
+# start multiple workers that may crash
+maybe_quiet $TIMEOUT2 ./cmd/worker mr -i "input/pg*txt" -p mrapps/crash.so -w 1 -r 1 -P 40001 &
 
-# # Keep starting workers until job is done
-# port=40002
-# while [ ! -f output/mr-done ]
-# do
-#   maybe_quiet $TIMEOUT2 ./cmd/worker mr -i "input/pg*txt" -p mrapps/crash.so -w $((port-40000)) -r 1 -P $port &
-#   port=$((port+1))
-#   if [ $port -gt 40050 ]; then
-#     port=40001
-#   fi
-#   sleep 1
-# done
+# Keep starting workers until job is done
+port=40002
+while [ ! -f output/mr-done ]
+do
+  maybe_quiet $TIMEOUT2 ./cmd/worker mr -i "input/pg*txt" -p mrapps/crash.so -w 1 -r 1 -P $port &
+  port=$((port+1))
+  if [ $port -gt 40025 ]; then
+    port=40001
+  fi
+  sleep 1
+done
 
-# wait
+wait
 
-# sort output/mr-out* | grep . > output/mr-crash-all
-# if cmp output/mr-crash-all output/mr-correct-crash.txt
-# then
-#   echo '---' crash test: PASS
-# else
-#   echo '---' crash output is not the same as mr-correct-crash.txt
-#   echo '---' crash test: FAIL
-#   failed_any=1
-# fi
+sort output/mr-out* | grep . > output/mr-crash-all
+if cmp output/mr-crash-all output/mr-correct-crash.txt
+then
+  echo '---' crash test: PASS
+else
+  echo '---' crash output is not the same as mr-correct-crash.txt
+  echo '---' crash test: FAIL
+  failed_any=1
+fi
 
 #########################################################
 if [ $failed_any -eq 0 ]; then

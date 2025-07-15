@@ -35,7 +35,7 @@ func main() {
 	log.Infof("[Worker] Worker gRPC server start on %v", workerIP)
 
 	workerStruct := ws.(*worker.Worker)
-
+	defer close(workerStruct.ChanEnd)
 	// assign map and reduce plugin to worker
 	workerStruct.Mapf, workerStruct.Reducef = loadPlugin(pluginFile)
 
@@ -46,7 +46,7 @@ func main() {
 	}, masterIP)
 
 	if err != nil {
-		baseServer.GracefulStop()
+		baseServer.Stop()
 		log.Fatalf("Register worker with master failed with reason: %v", err.Error())
 	}
 
