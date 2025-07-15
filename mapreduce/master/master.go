@@ -364,7 +364,9 @@ func (m *Master) serviceDiscovery(uuid string) string {
 	return res
 }
 
-func (m *Master) EndWorker() {
+func (m *Master) EndWorker(baseServer *grpc.Server) {
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
 	for _, workerInfo := range m.WorkerInfo {
 		if isShutDown := m.workerClient.End(workerInfo.WorkerIP); !isShutDown {
 			log.Warnf("Worker %v shutdown failed", workerInfo.WorkerIP)
@@ -372,4 +374,6 @@ func (m *Master) EndWorker() {
 
 		log.Infof("Worker %v shutdown successfully", workerInfo.WorkerIP)
 	}
+
+	baseServer.GracefulStop()
 }

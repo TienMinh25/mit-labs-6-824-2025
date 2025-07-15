@@ -46,6 +46,7 @@ func main() {
 	}, masterIP)
 
 	if err != nil {
+		baseServer.GracefulStop()
 		log.Fatalf("Register worker with master failed with reason: %v", err.Error())
 	}
 
@@ -62,7 +63,6 @@ func main() {
 // load the application Map and Reduce functions
 // from a plugin file, e.g. ../mrapps/wc.so
 func loadPlugin(filename string) (func(string, string) []types.KeyValue, func(string, []string) string) {
-	log.Info(filename)
 	p, err := plugin.Open(filename)
 	if err != nil {
 		log.Fatalf("cannot load plugin %v, err msg: %v", filename, err.Error())

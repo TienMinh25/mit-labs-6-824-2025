@@ -51,7 +51,5 @@ func main() {
 
 	// TODO: after done, send signal worker to terminal (graceful shutdown)
 	masterStruct.EndChan <- true
-	masterStruct.EndWorker()
-
-	baseServer.GracefulStop()
+	masterStruct.EndWorker(baseServer)
 }

@@ -76,7 +76,7 @@ func (client *workerRpcClient) AssignMapTask(data *proto_gen.AssignMapTaskReq, w
 	conn, c := client.Connect(workerIP)
 	defer conn.Close()
 
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
 	r, err := c.AssignMapTask(ctx, data)
@@ -98,7 +98,7 @@ func (client *workerRpcClient) AssignReduceTask(data *proto_gen.AssignReduceTask
 	conn, c := client.Connect(workerIP)
 	defer conn.Close()
 
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
 	r, err := c.AssignReduceTask(ctx, data)
@@ -120,7 +120,7 @@ func (client *workerRpcClient) End(workerIP string) bool {
 	conn, c := client.Connect(workerIP)
 	defer conn.Close()
 
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
 	_, err := c.End(ctx, &proto_gen.Empty{})

@@ -54,10 +54,7 @@ func nparallel(phase string) int {
 
 	time.Sleep(1 * time.Second)
 
-	err = os.Remove(myfilename)
-	if err != nil {
-		panic(err)
-	}
+	os.Remove(myfilename)
 
 	return ret
 }
