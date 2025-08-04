@@ -3,6 +3,7 @@ module github.com/TienMinh25/mit-labs-6-824-2025
 go 1.23.6
 
 require (
+	github.com/anishathalye/porcupine v1.0.3
 	github.com/google/uuid v1.6.0
 	github.com/sirupsen/logrus v1.9.3
 	github.com/spf13/cobra v1.9.1
