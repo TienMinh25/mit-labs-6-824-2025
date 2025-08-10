@@ -1,11 +1,15 @@
 # MIT 6.824
-My personal solutions and track to the [MIT 6.824](https://pdos.csail.mit.edu/6.824/schedule.html) distributed systems course.
-Use version 2025
+My personal solutions and track to the [MIT 6.824] **(2020)** (https://pdos.csail.mit.edu/6.824/schedule.html) distributed systems course.
+But my code use version **2025**
 
 ## Contents
 - [x] Lab 1: Map Reduce
 
-- [ ] Lab 2: Raft
+- [x] Lab 2: Raft
+  - [x] 2A: Leader election
+  - [x] 2B: Log replication
+  - [x] 2C: Persistence
+  - [x] 2D: Log Compaction
 
 - [ ] Lab 3: KV Raft
 
@@ -37,4 +41,14 @@ cd mapreduce
 
 ```
 bash test-mr.sh
+```
+
+3. Raft
+- First, navigate into `raft` directory
+```
+cd raft
+```
+- Then, you run the script:
+```go
+go test -run ".*3.*"
 ```
