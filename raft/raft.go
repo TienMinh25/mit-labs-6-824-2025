@@ -382,14 +382,14 @@ func (rf *Raft) manageCandidate() {
 			var reply RequestVoteReply
 
 			ok := rf.sendRequestVote(idx, &args, &reply)
+			rf.mu.Lock()
+			defer rf.mu.Unlock()
+
 			finished++
 
 			if !ok {
 				return
 			}
-
-			rf.mu.Lock()
-			defer rf.mu.Unlock()
 
 			if reply.VoteGranted {
 				countingVote++
