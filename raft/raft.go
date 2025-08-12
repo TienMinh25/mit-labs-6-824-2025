@@ -50,6 +50,8 @@ type Raft struct {
 
 	// additional field for handle last timeout =))
 	lastTimeoutDuration time.Duration
+
+	snapshotMu sync.Mutex
 }
 
 type RaftState int
@@ -183,6 +185,8 @@ func (rf *Raft) PersistBytes() int {
 // service no longer needs the log through (and including)
 // that index. Raft should now trim its log as much as possible.
 func (rf *Raft) Snapshot(index int, snapshot []byte) {
+	rf.snapshotMu.Lock()
+	defer rf.snapshotMu.Unlock()
 	rf.mu.Lock()
 	defer rf.mu.Unlock()
 
@@ -695,7 +699,7 @@ func (rf *Raft) updateCommitIndex() {
 }
 
 func (rf *Raft) applyLogs(msgs []raftapi.ApplyMsg) {
-	rf.mu.Lock()
+	rf.snapshotMu.Lock()
 
 	for _, msg := range msgs {
 		if rf.lastIncludedIndex > msg.CommandIndex {
@@ -705,7 +709,7 @@ func (rf *Raft) applyLogs(msgs []raftapi.ApplyMsg) {
 		rf.applyCh <- msg
 	}
 
-	rf.mu.Unlock()
+	rf.snapshotMu.Unlock()
 }
 
 func getRandomizedTime() time.Duration {
