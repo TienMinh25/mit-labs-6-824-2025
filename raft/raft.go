@@ -51,7 +51,7 @@ type Raft struct {
 	// additional field for handle last timeout =))
 	lastTimeoutDuration time.Duration
 
-	snapshotMu sync.Mutex
+	snapshotting int32
 }
 
 type RaftState int
@@ -185,11 +185,19 @@ func (rf *Raft) PersistBytes() int {
 // service no longer needs the log through (and including)
 // that index. Raft should now trim its log as much as possible.
 func (rf *Raft) Snapshot(index int, snapshot []byte) {
-	rf.snapshotMu.Lock()
-	defer rf.snapshotMu.Unlock()
+	// fmt.Printf("Server %v start snapshot\n", rf.me)
+
+	// Try to set snapshotting flag
+	if !atomic.CompareAndSwapInt32(&rf.snapshotting, 0, 1) {
+		fmt.Printf("Server %v already snapshotting\n", rf.me)
+		return // Already snapshotting
+	}
+	defer rf.setSnapshotting(false)
+
 	rf.mu.Lock()
 	defer rf.mu.Unlock()
 
+	fmt.Printf("Server %v start snapshot\n", rf.me)
 	if index <= rf.lastIncludedIndex {
 		return
 	}
@@ -214,6 +222,8 @@ func (rf *Raft) Snapshot(index int, snapshot []byte) {
 
 	rf.logs = newLogs
 	rf.persist()
+
+	fmt.Printf("Server %v snapshot oke \n", rf.me)
 }
 
 // example RequestVote RPC arguments structure.
@@ -234,7 +244,7 @@ type RequestVoteReply struct {
 
 // example RequestVote RPC handler.
 func (rf *Raft) RequestVote(args *RequestVoteArgs, reply *RequestVoteReply) {
-	fmt.Printf("request vote from [candidate: %v, term: %v] to [follower: %v, state: %v, term: %v]\n", args.CandidateId, args.Term, rf.me, rf.state, rf.currentTerm)
+	// fmt.Printf("request vote from [candidate: %v, term: %v] to [follower: %v, state: %v, term: %v]\n", args.CandidateId, args.Term, rf.me, rf.state, rf.currentTerm)
 	rf.mu.Lock()
 	defer rf.mu.Unlock()
 
@@ -272,7 +282,7 @@ func (rf *Raft) RequestVote(args *RequestVoteArgs, reply *RequestVoteReply) {
 	rf.votedFor = args.CandidateId
 	rf.lastAccessed = time.Now()
 	rf.persist()
-	fmt.Printf("request vote from candidate %v to follower %v end\n", args.CandidateId, rf.me)
+	// fmt.Printf("request vote from candidate %v to follower %v end\n", args.CandidateId, rf.me)
 }
 
 // example code to send a RequestVote RPC to a server.
@@ -314,7 +324,7 @@ func (rf *Raft) Start(command interface{}) (int, int, bool) {
 	rf.persist()
 	rf.mu.Unlock()
 
-	fmt.Printf("Leader %v added new log entry at index %v: %v\n", rf.me, newIndex, command)
+	// fmt.Printf("Leader %v added new log entry at index %v: %v\n", rf.me, newIndex, command)
 	return newIndex, rf.currentTerm, isLeader
 }
 
@@ -413,7 +423,7 @@ func (rf *Raft) runServer() {
 			rf.manageLeader()
 		}
 
-		time.Sleep(35 * time.Millisecond)
+		time.Sleep(40 * time.Millisecond)
 	}
 }
 
@@ -432,7 +442,7 @@ func (rf *Raft) runServer() {
 func (rf *Raft) manageCandidate() {
 	timeout := getRandomizedTime() * time.Millisecond
 	start := time.Now()
-	fmt.Printf("candidate %v start new election\n", rf.me)
+	// fmt.Printf("candidate %v start new election\n", rf.me)
 
 	rf.mu.Lock()
 
@@ -510,7 +520,7 @@ func (rf *Raft) manageCandidate() {
 	// if not timeout, check condition pass
 	if rf.state == CANDIDATE && countingVote >= majorityAccepts {
 		rf.state = LEADER
-		fmt.Printf("candidate %v win election\n", rf.me)
+		// fmt.Printf("candidate %v win election\n", rf.me)
 
 		// initialize nextIndex and matchIndex
 		for peer := range peers {
@@ -679,8 +689,8 @@ func (rf *Raft) updateCommitIndex() {
 
 				entry := rf.getLogEntry(i)
 				if entry != nil {
-					fmt.Printf("Leader %v applying log index %v: [Term: %v, Command: %v]\n",
-						rf.me, i, entry.Term, entry.Command)
+					// fmt.Printf("Leader %v applying log index %v: [Term: %v, Command: %v]\n",
+					// 	rf.me, i, entry.Term, entry.Command)
 					applyMsgs = append(applyMsgs, raftapi.ApplyMsg{
 						CommandValid: true,
 						Command:      entry.Command,
@@ -699,17 +709,19 @@ func (rf *Raft) updateCommitIndex() {
 }
 
 func (rf *Raft) applyLogs(msgs []raftapi.ApplyMsg) {
-	rf.snapshotMu.Lock()
-
 	for _, msg := range msgs {
-		if rf.lastIncludedIndex > msg.CommandIndex {
+		// Quick check without long lock
+		rf.mu.Lock()
+		shouldSkip := rf.lastIncludedIndex > msg.CommandIndex
+		rf.mu.Unlock()
+		
+		if shouldSkip {
 			continue
 		}
-
+		
+		// Send message (có thể block nhưng không hold lock)
 		rf.applyCh <- msg
 	}
-
-	rf.snapshotMu.Unlock()
 }
 
 func getRandomizedTime() time.Duration {
@@ -734,7 +746,7 @@ type AppendEntriesReply struct {
 }
 
 func (rf *Raft) AppendEntries(args *AppendEntriesArgs, reply *AppendEntriesReply) {
-	fmt.Printf("follower %v received append entry from [leader %v, term leader: %v, len entries: %v]\n", rf.me, args.LeaderId, args.Term, len(args.Entries))
+	// fmt.Printf("follower %v received append entry from [leader %v, term leader: %v, len entries: %v]\n", rf.me, args.LeaderId, args.Term, len(args.Entries))
 	rf.mu.Lock()
 
 	reply.Term = rf.currentTerm
@@ -757,7 +769,7 @@ func (rf *Raft) AppendEntries(args *AppendEntriesArgs, reply *AppendEntriesReply
 	}
 
 	rf.state = FOLLOWER
-	fmt.Printf("follower %v updated last accessed from leader %v\n", rf.me, args.LeaderId)
+	// fmt.Printf("follower %v updated last accessed from leader %v\n", rf.me, args.LeaderId)
 	rf.lastAccessed = time.Now()
 
 	// Rule 2: Check if log contains entry at prevLogIndex with matching term
@@ -944,4 +956,18 @@ func min(a, b int) int {
 		return a
 	}
 	return b
+}
+
+// Check nếu đang snapshot
+func (rf *Raft) isSnapshotting() bool {
+	return atomic.LoadInt32(&rf.snapshotting) == 1
+}
+
+// Set snapshot flag
+func (rf *Raft) setSnapshotting(val bool) {
+	if val {
+		atomic.StoreInt32(&rf.snapshotting, 1)
+	} else {
+		atomic.StoreInt32(&rf.snapshotting, 0)
+	}
 }
